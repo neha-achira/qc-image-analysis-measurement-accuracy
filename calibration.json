@@ -1,0 +1,97 @@
+{
+    "holes": {
+        "scale_factor_mm_per_px": 0.0025,
+        "scale_factor_px_per_mm": 400.0,
+        "scale_factor_um_per_px": 2.5,
+        "reference_image": "Mixing_ch00.png",
+        "reference_feature": "hole",
+        "drawing_nominal_mm": 0.5,
+        "engineer_measured_mm": 0.5,
+        "deviation_from_nominal_mm": 0.0,
+        "n_holes_clicked": 1,
+        "mean_diameter_px": 200.0,
+        "std_diameter_px": 0.0,
+        "cv_percent": 0.0,
+        "individual_diameters_px": [
+            200.0
+        ],
+        "individual_scales": [
+            0.0025
+        ],
+        "microscope_magnification": "5X",
+        "image_format": "PNG",
+        "stitched": true,
+        "calibration_date": "2026-05-25T21:35:36.624697",
+        "drawing_number": "ACMCTA001",
+        "part": "Beta Cartridge",
+        "notes": "Engineer measured 0.5 mm on hole (drawing nominal: 0.5 mm, deviation: +0.00000 mm). Averaged over 1 measurement(s). Applies to image type: holes. Re-calibrate if magnification or camera settings change."
+    },
+    "last_calibrated": {
+        "image_type": "holes",
+        "date": "2026-05-25T21:35:36.624697",
+        "feature": "hole",
+        "scale_um_per_px": 2.5
+    },
+    "neck": {
+        "scale_factor_mm_per_px": 0.00266667,
+        "scale_factor_px_per_mm": 374.9995,
+        "scale_factor_um_per_px": 2.66667,
+        "reference_image": "neck_ch00.png",
+        "reference_feature": "neck",
+        "drawing_nominal_mm": 0.2,
+        "engineer_measured_mm": 0.2,
+        "deviation_from_nominal_mm": 0.0,
+        "n_holes_clicked": 1,
+        "mean_diameter_px": 75.0,
+        "std_diameter_px": 0.0,
+        "cv_percent": 0.0,
+        "individual_diameters_px": [
+            75.0
+        ],
+        "individual_scales": [
+            0.00266667
+        ],
+        "microscope_magnification": "5X",
+        "image_format": "PNG",
+        "stitched": true,
+        "calibration_date": "2026-05-25T09:51:58.813553",
+        "drawing_number": "ACMCTA001",
+        "part": "Beta Cartridge",
+        "notes": "Engineer measured 0.2 mm on neck (drawing nominal: 0.2 mm, deviation: +0.00000 mm). Averaged over 1 measurement(s). Applies to image type: neck. Re-calibrate if magnification or camera settings change."
+    },
+    "mixing": {
+        "scale_factor_mm_per_px": 0.0025,
+        "scale_factor_px_per_mm": 400.0,
+        "scale_factor_um_per_px": 2.5,
+        "reference_image": "Mixing_ch00.png",
+        "reference_feature": "hole",
+        "drawing_nominal_mm": 0.5,
+        "engineer_measured_mm": 0.5,
+        "deviation_from_nominal_mm": 0.0,
+        "n_holes_clicked": 1,
+        "mean_diameter_px": 200.0,
+        "std_diameter_px": 0.0,
+        "cv_percent": 0.0,
+        "individual_diameters_px": [
+            200.0
+        ],
+        "individual_scales": [
+            0.0025
+        ],
+        "microscope_magnification": "5X",
+        "image_format": "PNG",
+        "stitched": true,
+        "calibration_date": "2026-05-25T21:35:36.624697",
+        "drawing_number": "ACMCTA001",
+        "part": "Beta Cartridge",
+        "notes": "Mixing_ch00.png calibration. 200px = 0.50mm. 2.500 um/px."
+    },
+    "DAB": {
+    "scale_factor_mm_per_px": 0.0025,
+    "scale_factor_px_per_mm": 400.0,
+    "scale_factor_um_per_px": 2.5,
+    "reference_image": "DAB_ch00.png",
+    "reference_feature": "hole",
+    "drawing_nominal_mm": 0.5
+}
+}

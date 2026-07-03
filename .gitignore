@@ -1,0 +1,52 @@
+# ── Python cache ──────────────────────────────────────────────────────────────
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# ── Cartridge image folders (large raw microscope data — not code) ────────────
+WB/
+WB_*/
+QC/
+Washed_baseplates/
+BASEPLATE-*/
+dome holes/
+mixing holes/
+
+# ── Reference calibration images (captured locally, not needed for code) ──────
+Holes_ch00.png
+neck_ch00.png
+Neck_ch00.png
+DAB_ch00.png
+Mixing_ch00.png
+*.tif
+*.tiff
+
+# ── CSV / Excel result files (generated outputs, not source code) ─────────────
+*.csv
+*.xlsx
+*.xls
+
+# ── Annotated / debug output images (regenerated on each run) ─────────────────
+*_detected.png
+*_detected_*.png
+*_debug_comparison.png
+*_01_gray_raw.png
+*_02_clahe.png
+*_03_blurred.png
+*_04_edges.png
+*_05_binary.png
+calibration_annotated.png
+
+# ── Archives ───────────────────────────────────────────────────────────────────
+*.zip
+*.tar.gz
+*.7z
+
+# ── OS files ───────────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ── Generated validation/investigation output (not source code) ───────────────
+validation_output/
