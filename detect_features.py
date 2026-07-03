@@ -364,6 +364,20 @@ def detect_holes(preprocessed, mm_per_px, debug_context=None):
                 used.add(best_i)
         return matched
 
+    # ── Stage 2 candidate-selection refinement (preview only, not yet active) ──
+    # Ranks in-tolerance candidates by information _subpixel_diameter already
+    # computed: fallback_mode tier, then ray hit count, then near-nominal ray
+    # count, then distance (closest wins ties). No new thresholds.
+    FALLBACK_RANK = {"total_failure": 0, "off_nominal_fallback": 1, "normal": 2}
+
+    def _stage2_rank_key(c, px, py):
+        d = np.sqrt((c["cx_px"]-px)**2 + (c["cy_px"]-py)**2)
+        dbg = _ray_debug_by_id.get(id(c), {})
+        fallback = dbg.get("fallback_mode", "total_failure")
+        n_hit = dbg.get("n_hit", 0)
+        near = len(dbg.get("near_nominal_radii", []))
+        return (FALLBACK_RANK.get(fallback, 0), n_hit, near, -d)
+
     # Tag 1 is the most isolated hole (~30mm from nearest neighbour)
     # Its pixel isolation at ref scale = ~30mm / 0.002667 mm/px = ~11,250px
     best_score, best_matched = 0, {}
@@ -380,17 +394,59 @@ def detect_holes(preprocessed, mm_per_px, debug_context=None):
             best_score, best_matched = score, matched
             best_anchor_cxy = (anchor["cx_px"], anchor["cy_px"])
 
+    # Frozen snapshot of the anchor-selection result, taken before Stage 2
+    # runs. Downstream missing-hole classification must reason about the
+    # exact same anchor geometry production always used -- it must NOT see
+    # Stage 2's candidate reassignments below.
+    best_matched_anchor_ref = dict(best_matched)
+
+    # Stage 2 candidate-selection refinement: among candidates within
+    # MATCH_TOL_PX of each matched tag's predicted position, replace the
+    # anchor-selection's nearest-distance pick with the best-ranked one
+    # (fallback tier, then ray hit count, then near-nominal count, then
+    # distance) using the ranking from _stage2_rank_key. Applied
+    # unconditionally so it affects production output; debug_context
+    # recording is optional and has no effect on the applied result.
+    if best_anchor_cxy is not None:
+        stage2_preview = {} if debug_context is not None else None
+        preds_final = _predict_positions(*best_anchor_cxy)
+        for tag, current in list(best_matched.items()):
+            px, py = preds_final[tag]
+            current_key = _stage2_rank_key(current, px, py)
+            best_alt, best_alt_key = None, current_key
+            for c in detected:
+                if c is current:
+                    continue
+                d = np.sqrt((c["cx_px"]-px)**2 + (c["cy_px"]-py)**2)
+                if d >= MATCH_TOL_PX:
+                    continue
+                k = _stage2_rank_key(c, px, py)
+                if k > best_alt_key:
+                    best_alt, best_alt_key = c, k
+            if best_alt is not None:
+                if stage2_preview is not None:
+                    stage2_preview[tag] = {
+                        "would_change": True,
+                        "current_cxy": (current["cx_px"], current["cy_px"]),
+                        "current_key": current_key,
+                        "alt_cxy": (best_alt["cx_px"], best_alt["cy_px"]),
+                        "alt_key": best_alt_key,
+                    }
+                best_matched[tag] = best_alt
+        if debug_context is not None:
+            debug_context["stage2_preview"] = stage2_preview
+
     # Identify unmatched holes — check if outside image bounds or genuinely missing
     missing_holes = []
-    if best_matched:
-        anchor_tag = min(best_matched.keys())
-        anchor_c   = best_matched[anchor_tag]
+    if best_matched_anchor_ref:
+        anchor_tag = min(best_matched_anchor_ref.keys())
+        anchor_c   = best_matched_anchor_ref[anchor_tag]
         ax, ay     = anchor_c["cx_px"], anchor_c["cy_px"]
         h_img_f, w_img_f = preprocessed["bgr"].shape[:2]
         margin = int(MATCH_TOL_PX)
 
         for tag, (dx, dy) in REF_OFFSETS.items():
-            if tag in best_matched:
+            if tag in best_matched_anchor_ref:
                 continue
             pred_x = ax + dx
             pred_y = ay + dy
