@@ -162,7 +162,7 @@ def detect_image_type(image_path: str) -> str:
     for img_type, keywords in IMAGE_TYPES.items():
         if any(kw in name for kw in keywords):
             return img_type
-    return "holes"  # safe default — most conservative settings
+    return "unknown"
 
 
 # ── Core preprocessing ────────────────────────────────────────────────────────
