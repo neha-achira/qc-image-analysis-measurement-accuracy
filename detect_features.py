@@ -1306,7 +1306,7 @@ def detect(image_path, calibration, save_annotated=False, annotated_path=None,
         features  = detect_mixing(preprocessed, mm_per_px)
         annotated = annotate_mixing(img_bgr, features, mm_per_px)
     else:
-        print(f"  ⚠  {img_type} detection pending — provide sample image.")
+        print(f"  WARNING: {img_type} detection pending — provide sample image.")
         features  = {"note": f"{img_type} detection not yet implemented"}
         annotated = img_bgr.copy()
         cv2.putText(annotated, f"{img_type.upper()} — pending",
