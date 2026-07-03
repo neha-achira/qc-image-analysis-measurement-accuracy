@@ -616,12 +616,21 @@ class QCApp(tk.Tk):
             # Find PNG images in the sub-folder
             # Exclude annotated outputs (_detected.png) from previous runs
             # so re-running doesn't feed annotated images back into detection.
-            imgs = sorted([
-                p for p in list(sf.glob("*.png")) + list(sf.glob("*.PNG"))
-                if not p.stem.endswith("_detected")
-                   and not p.stem.endswith("_debug")
-                   and not p.stem.endswith("_annotated")
-            ])
+            # Deduplicated by resolved path: on case-insensitive filesystems
+            # (Windows), "*.png" and "*.PNG" match the same files, which
+            # previously caused every image to be processed twice.
+            seen_paths = set()
+            imgs = []
+            for p in sorted(list(sf.glob("*.png")) + list(sf.glob("*.PNG"))):
+                if (p.stem.endswith("_detected")
+                        or p.stem.endswith("_debug")
+                        or p.stem.endswith("_annotated")):
+                    continue
+                key = p.resolve()
+                if key in seen_paths:
+                    continue
+                seen_paths.add(key)
+                imgs.append(p)
 
             for img_path in imgs:
                 img_type = _detect_mod.detect_image_type(str(img_path))
