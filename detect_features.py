@@ -436,6 +436,80 @@ def detect_holes(preprocessed, mm_per_px, debug_context=None):
         if debug_context is not None:
             debug_context["stage2_preview"] = stage2_preview
 
+    # ── Additive recovery pass ─────────────────────────────────────────────────
+    # Frozen-anchor design (docs/STAGE6_RECOVERY_PASS_DESIGN.md, validated in
+    # docs/STAGE6_QUALITY_GATE_VALIDATION_REPORT.md). Attempts to fill tags
+    # Stage 1/Stage 2 left unmatched, using a wider search radius than
+    # MATCH_TOL_PX. Never re-runs the anchor competition (best_anchor_cxy is
+    # read, not recomputed), never touches a tag already in best_matched, and
+    # never reassigns a candidate already claimed by another tag -- it can
+    # only ever add a brand-new entry for a tag that currently has none.
+    RECOVERY_TOL_PX = 690          # px -- stays under 2x < 1393.9px (the
+                                    # established min pairwise predicted-tag
+                                    # distance), preserving the existing
+                                    # cross-tag-contention safety proof.
+    RECOVERY_MIN_NEAR_RATIO = 0.70  # near_nominal_count / n_rays
+    RECOVERY_MAX_ANGULAR_GAP = 40.0  # degrees, largest gap between hit rays
+
+    def _max_angular_gap(rays):
+        n_rays = len(rays)
+        hit_idx = [i for i, r in enumerate(rays) if r["hit"]]
+        if len(hit_idx) < 2:
+            return 360.0
+        gaps = []
+        for i in range(len(hit_idx)):
+            cur = hit_idx[i]
+            nxt = hit_idx[(i + 1) % len(hit_idx)]
+            gaps.append((nxt - cur) % n_rays)
+        return max(gaps) * (360.0 / n_rays)
+
+    recovered_tags = []
+    if best_anchor_cxy is not None:
+        preds_recovery = _predict_positions(*best_anchor_cxy)
+        h_img_r, w_img_r = preprocessed["bgr"].shape[:2]
+        margin_r = int(MATCH_TOL_PX)
+        used_ids = {id(c) for c in best_matched.values()}
+
+        for tag in sorted(REF_OFFSETS.keys()):
+            if tag in best_matched:
+                continue
+            px, py = preds_recovery[tag]
+            outside = (px < -margin_r or px > w_img_r + margin_r or
+                       py < -margin_r or py > h_img_r + margin_r)
+            if outside:
+                continue   # matches the missing-hole diagnostic's own bounds check
+
+            best_c, best_key = None, None
+            for c in detected:
+                if id(c) in used_ids:
+                    continue
+                d = np.sqrt((c["cx_px"]-px)**2 + (c["cy_px"]-py)**2)
+                if d >= RECOVERY_TOL_PX:
+                    continue
+                dbg = _ray_debug_by_id.get(id(c), {})
+                fallback = dbg.get("fallback_mode", "total_failure")
+                if fallback != "normal":
+                    continue
+                rays = dbg.get("rays", [])
+                near = len(dbg.get("near_nominal_radii", []))
+                near_ratio = near / len(rays) if rays else 0.0
+                if near_ratio < RECOVERY_MIN_NEAR_RATIO:
+                    continue
+                if _max_angular_gap(rays) > RECOVERY_MAX_ANGULAR_GAP:
+                    continue
+                k = _stage2_rank_key(c, px, py)
+                if best_c is None or k > best_key:
+                    best_c, best_key = c, k
+
+            if best_c is not None:
+                best_matched[tag] = best_c
+                best_matched_anchor_ref[tag] = best_c
+                used_ids.add(id(best_c))
+                recovered_tags.append(tag)
+
+        if debug_context is not None:
+            debug_context["recovery_pass"] = {"recovered_tags": recovered_tags}
+
     # Identify unmatched holes — check if outside image bounds or genuinely missing
     missing_holes = []
     if best_matched_anchor_ref and best_anchor_cxy is not None:
