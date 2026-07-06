@@ -438,10 +438,13 @@ def detect_holes(preprocessed, mm_per_px, debug_context=None):
 
     # Identify unmatched holes — check if outside image bounds or genuinely missing
     missing_holes = []
-    if best_matched_anchor_ref:
-        anchor_tag = min(best_matched_anchor_ref.keys())
-        anchor_c   = best_matched_anchor_ref[anchor_tag]
-        ax, ay     = anchor_c["cx_px"], anchor_c["cy_px"]
+    if best_matched_anchor_ref and best_anchor_cxy is not None:
+        # True anchor position, not an approximation from an arbitrary
+        # matched tag's own raw detected position. Equivalent to
+        # reconstructing it from that tag's expected_px and REF_OFFSETS
+        # (expected_px[tag] - REF_OFFSETS[tag] == best_anchor_cxy by
+        # construction) -- read directly here instead of re-deriving it.
+        ax, ay     = best_anchor_cxy
         h_img_f, w_img_f = preprocessed["bgr"].shape[:2]
         margin = int(MATCH_TOL_PX)
 
