@@ -378,21 +378,44 @@ def detect_holes(preprocessed, mm_per_px, debug_context=None):
         near = len(dbg.get("near_nominal_radii", []))
         return (FALLBACK_RANK.get(fallback, 0), n_hit, near, -d)
 
-    # Tag 1 is the most isolated hole (~30mm from nearest neighbour)
-    # Its pixel isolation at ref scale = ~30mm / 0.002667 mm/px = ~11,250px
     best_score, best_matched = 0, {}
     best_anchor_cxy = None
 
-    # Try EVERY candidate as a potential Tag1 anchor and pick the one
-    # that matches the most holes. This is more reliable than assuming
-    # Tag1 is the most isolated — on some images another hole may be
-    # more isolated due to image cropping.
-    for anchor in detected:
-        matched = _score_anchor(anchor["cx_px"], anchor["cy_px"], detected)
-        score   = len(matched)
-        if score > best_score:
-            best_score, best_matched = score, matched
-            best_anchor_cxy = (anchor["cx_px"], anchor["cy_px"])
+    # Role-generalized anchor search (docs/STAGE7_ANCHOR_SELECTION_REDESIGN.md,
+    # validated in docs/STAGE7_CARTRIDGE72_FOCUSED_DESIGN_FINAL.md). Try every
+    # candidate against every one of the 7 tag roles, not only the Tag 9/anchor
+    # role -- a cartridge's true Tag 9 location can have no corresponding Hough
+    # candidate at all while the other 6 tags are cleanly detected, in which
+    # case no candidate can ever score well while restricted to the Tag-9-only
+    # assumption. Scoring itself (_score_anchor, MATCH_TOL_PX) is unchanged.
+    # Ties (equal match count) are broken by:
+    #   1. the anchor candidate's own fallback_mode (normal best)
+    #   2. the anchor candidate's own near-nominal ratio
+    #   3. negative total match distance (tighter overall fit preferred)
+    #   4. role == 9 preferred last (reproduces today's default on a full tie)
+    best_tiebreak = None
+    for cand in detected:
+        cand_dbg = _ray_debug_by_id.get(id(cand), {})
+        cand_fallback_rank = FALLBACK_RANK.get(cand_dbg.get("fallback_mode", "total_failure"), 0)
+        n_rays_c = cand_dbg.get("n_rays", 0)
+        cand_near_ratio = (len(cand_dbg.get("near_nominal_radii", [])) / n_rays_c) if n_rays_c else 0.0
+        for role, (rdx, rdy) in REF_OFFSETS.items():
+            ax, ay = cand["cx_px"] - rdx, cand["cy_px"] - rdy
+            matched = _score_anchor(ax, ay, detected)
+            score   = len(matched)
+            if score == 0:
+                continue
+            total_dist = sum(
+                np.sqrt((c["cx_px"]-(ax+REF_OFFSETS[t][0]))**2 + (c["cy_px"]-(ay+REF_OFFSETS[t][1]))**2)
+                for t, c in matched.items()
+            )
+            role_pref = 1 if role == 9 else 0
+            tiebreak = (cand_fallback_rank, cand_near_ratio, -total_dist, role_pref)
+            key = (score,) + tiebreak
+            if best_tiebreak is None or key > best_tiebreak:
+                best_tiebreak = key
+                best_score, best_matched = score, matched
+                best_anchor_cxy = (ax, ay)
 
     # Frozen snapshot of the anchor-selection result, taken before Stage 2
     # runs. Downstream missing-hole classification must reason about the
