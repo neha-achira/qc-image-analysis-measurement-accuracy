@@ -50,3 +50,6 @@ desktop.ini
 
 # ── Generated validation/investigation output (not source code) ───────────────
 validation_output/
+
+# ── Claude Code local session/tooling state (not project content) ─────────────
+.claude/
