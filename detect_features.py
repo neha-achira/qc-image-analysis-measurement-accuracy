@@ -52,6 +52,7 @@ sys.path.insert(0, str(Path(__file__).parent))
 from preprocess import preprocess, detect_image_type, load_image
 from leica_calibration import resolve_scale_factor
 from calibrate  import load_calibration
+from confidence import compute_confidence
 
 
 # ── Nominal hole positions (Sheet 2, mm) ─────────────────────────────────────
@@ -631,10 +632,14 @@ def detect_holes(preprocessed, mm_per_px, debug_context=None):
             debug_context["start_cy"] = cy
         return best_cx, best_cy
 
-    # If requested, retrieve the winning anchor's predicted positions using
-    # the SAME _predict_positions already used above (called once more with
-    # the known winning anchor, not reimplemented) -- diagnostic only.
-    if debug_context is not None and best_anchor_cxy is not None:
+    # Retrieve the winning anchor's predicted positions using the SAME
+    # _predict_positions already used above (called once more with the
+    # known winning anchor, not reimplemented). Computed unconditionally
+    # (not only when debug_context is requested) because the confidence
+    # module below needs each matched hole's distance from its predicted
+    # position -- this is pure arithmetic on an already-computed anchor,
+    # not new image processing, and does not alter any existing value.
+    if best_anchor_cxy is not None:
         _expected_positions = _predict_positions(*best_anchor_cxy)
     else:
         _expected_positions = {}
@@ -644,6 +649,29 @@ def detect_holes(preprocessed, mm_per_px, debug_context=None):
     for tag, c in sorted(best_matched.items()):
         refine_ctx = {} if debug_context is not None else None
         cx_refined, cy_refined = _refine_center(c["cx_px"], c["cy_px"], debug_context=refine_ctx)
+
+        # ── Confidence annotation (Stage 20, docs/STAGE20_...) ──────────────
+        # Informational only -- computed AFTER the match above is already
+        # final, from diagnostics already produced for this exact candidate
+        # (_ray_debug_by_id) and the already-computed predicted position.
+        # Never influences detection, assignment, recovery, measurement, or
+        # PASS/FAIL, all of which are already decided by this point.
+        ray_dbg = _ray_debug_by_id.get(id(c)) or {}
+        n_rays_c = ray_dbg.get("n_rays", 36)
+        n_hit_c = ray_dbg.get("n_hit", 0)
+        near_ratio_c = (len(ray_dbg.get("near_nominal_radii", [])) / n_rays_c) if n_rays_c else 0.0
+        angular_gap_c = _max_angular_gap(ray_dbg.get("rays", []))
+        fallback_mode_c = ray_dbg.get("fallback_mode", "total_failure")
+        pred_c = _expected_positions.get(tag)
+        dist_from_predicted_c = (
+            float(np.sqrt((c["cx_px"] - pred_c[0]) ** 2 + (c["cy_px"] - pred_c[1]) ** 2))
+            if pred_c is not None else 0.0
+        )
+        confidence_pct, confidence_category = compute_confidence(
+            n_hit_c, n_rays_c, near_ratio_c, angular_gap_c,
+            fallback_mode_c, dist_from_predicted_c,
+        )
+
         detected.append({
             **c,
             "dwg_tag":    tag,
@@ -651,6 +679,8 @@ def detect_holes(preprocessed, mm_per_px, debug_context=None):
             "cy_px":      cy_refined,
             "cx_hough":   c["cx_px"],    # keep original for debugging
             "cy_hough":   c["cy_px"],
+            "confidence_pct":      confidence_pct,
+            "confidence_category": confidence_category,
         })
         if debug_context is not None:
             debug_context.setdefault("per_hole", {})[tag] = {
@@ -1636,7 +1666,9 @@ def results_to_rows(cartridge_id: str, results: dict) -> list:
     Columns:
       cartridge_id, timestamp, image_type, feature_id, feature_label,
       nominal_mm, measured_mm, deviation_mm, lower_limit, upper_limit,
-      pass_fail, cx_px, cy_px, scale_um_per_px, notes
+      pass_fail, cx_px, cy_px, scale_um_per_px, notes,
+      Confidence (%), Confidence Category  (holes rows only; Stage 20 --
+      informational, does not affect measured_mm/pass_fail)
     """
     rows = []
     ts   = datetime.now().isoformat(timespec="seconds")
@@ -1667,6 +1699,8 @@ def results_to_rows(cartridge_id: str, results: dict) -> list:
                     "scale_um_per_px":scale_um,
                     "calibration_source": cal_source,
                     "notes":          f"outside_image" if c.get("outside_image") else "",
+                    "Confidence (%)":        c.get("confidence_pct", ""),
+                    "Confidence Category":   c.get("confidence_category", ""),
                 })
             # Missing holes (outside image / not detected)
             for m in f.get("missing_holes", []):
@@ -1774,6 +1808,7 @@ def export_csv(all_rows: list, output_path: str):
         "lower_limit_mm", "upper_limit_mm", "pass_fail",
         "cx_px", "cy_px", "scale_um_per_px", "calibration_source", "notes",
         "claude_triggered", "claude_verified", "claude_confidence", "claude_notes",
+        "Confidence (%)", "Confidence Category",
     ]
     with open(output_path, "w", newline="", encoding="utf-8-sig") as f:
         writer = csv.DictWriter(f, fieldnames=fieldnames)

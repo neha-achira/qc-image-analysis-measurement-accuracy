@@ -689,6 +689,19 @@ class QCApp(tk.Tk):
                         f"[{mmpx*1000:.3f} µm/px]",
                         "pass" if pf else "fail")
 
+                    # Per-hole confidence display (Stage 20, informational
+                    # only -- does not change any measurement, PASS/FAIL,
+                    # or the summary line/table above).
+                    if img_type == "holes":
+                        for c in f.get("circles", []):
+                            c_pf = c.get("pass")
+                            log(f"      Tag{c.get('dwg_tag','?')}: "
+                                f"Diameter {c.get('diameter_mm', 0):.3f} mm  "
+                                f"{'PASS' if c_pf else 'FAIL'}  "
+                                f"Confidence: {c.get('confidence_pct', 0):.0f}% "
+                                f"({c.get('confidence_category', '?')})",
+                                "pass" if c_pf else "fail")
+
                 except Exception as e:
                     row[img_type] = "ERR"
                     row["details"].append(f"{img_type} ERR")
