@@ -632,6 +632,12 @@ class QCApp(tk.Tk):
                 seen_paths.add(key)
                 imgs.append(p)
 
+            # Required-image check: misspelled or missing images are reported
+            # explicitly (never renamed, never silently skipped).
+            check = _detect_mod.validate_cartridge_images(str(sf), required=types)
+            for msg in check["messages"]:
+                log(f"  ⚠  {msg}", "warn")
+
             for img_path in imgs:
                 img_type = _detect_mod.detect_image_type(str(img_path))
                 if img_type not in types:
@@ -655,14 +661,19 @@ class QCApp(tk.Tk):
                     sym     = "✓" if pf else "✗"
                     mmpx    = result.get("mm_per_px", 0)
                     row[img_type] = "PASS" if pf else "FAIL"
+                    if result["features"].get("not_measured"):
+                        row[img_type] = "NOT_MEASURED"   # boundary not identifiable -- no value forced
 
                     f = result["features"]
                     if img_type == "holes":
                         det = (f"holes {f.get('n_detected','?')}"
                                f"/{f.get('n_expected','?')}")
                     elif img_type == "neck" and "error" not in f:
-                        det = (f"neck {f.get('trimmed_mean_mm', f.get('mean_width_mm','?')):.4f} mm"
-                               f"  dev={f.get('tolerance',{}).get('deviation_mm',0):+.5f}")
+                        det = (f"neck {f.get('trimmed_mean_mm', f.get('mean_width_mm', 0)):.4f} mm"
+                               f"  dev={f.get('tolerance',{}).get('deviation_mm',0):+.5f}"
+                               f"  (legacy method, provisional)")
+                    elif img_type == "neck" and f.get("not_measured"):
+                        det = f"neck NOT_MEASURED: {f.get('reason', f['error'])}"
                     elif img_type == "neck":
                         det = f"neck ERR: {f['error']}"
                     elif img_type == "dab":
@@ -707,6 +718,12 @@ class QCApp(tk.Tk):
                     row["details"].append(f"{img_type} ERR")
                     log(f"  ✗ {img_path.name}: ERROR — {e}", "error")
 
+            for img_type in check["missing"]:
+                msg = next(m for m in check["messages"] if f"required {img_type} image" in m)
+                row[img_type] = "MISSING"
+                row["details"].append(f"{img_type} MISSING")
+                cart_results[img_type] = _detect_mod.missing_image_result(img_type, msg)
+
             # Save one detail CSV per image type so re-runs don't overwrite each other
             for img_type, result in cart_results.items():
                 try:
@@ -725,6 +742,8 @@ class QCApp(tk.Tk):
                 row["overall"] = "PASS"
             elif any(v in ("FAIL", "ERR") for v in vals):
                 row["overall"] = "FAIL"
+            elif "MISSING" in vals or "NOT_MEASURED" in vals:
+                row["overall"] = "INCOMPLETE"   # never PASS with an unmeasured image
             else:
                 row["overall"] = "N/A"
 
@@ -802,6 +821,8 @@ class QCApp(tk.Tk):
             if v == "PASS": return "✓ PASS"
             if v == "FAIL": return "✗ FAIL"
             if v == "ERR":  return "⚠  ERR"
+            if v == "MISSING": return "⚠  MISSING"
+            if v == "NOT_MEASURED": return "⚠  NOT MEASURED"
             return v
 
         tag = ("pass"  if r["overall"] == "PASS"         else

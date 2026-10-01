@@ -165,6 +165,73 @@ def detect_image_type(image_path: str) -> str:
     return "unknown"
 
 
+# ── Cartridge folder validation ───────────────────────────────────────────────
+
+# One image of each type is expected per cartridge folder.
+REQUIRED_IMAGE_TYPES = ("holes", "neck", "dab", "mixing")
+_EXPECTED_NAMES = {"holes": "Holes_ch00.png", "neck": "Neck_ch00.png",
+                   "dab": "DAB_ch00.png", "mixing": "Mixing_ch00.png"}
+_GENERATED_SUFFIXES = ("_detected", "_debug", "_annotated")
+
+
+def validate_cartridge_images(folder_path: str, required=REQUIRED_IMAGE_TYPES) -> dict:
+    """
+    Check a cartridge folder for its required images WITHOUT renaming anything.
+
+    Returns
+    -------
+    dict with keys:
+      "found"        : {image_type: path} for recognised images
+      "missing"      : required image types with no recognised file
+      "duplicates"   : {image_type: [paths]} when more than one file matches
+      "unrecognized" : [(filename, suggested_type_or_None)] PNGs whose name
+                       matches no image type -- e.g. a misspelled
+                       'Miximg_ch00.png' is reported with suggestion 'mixing'
+                       and is NOT measured.
+      "messages"     : human-readable warnings/errors for logs
+    """
+    import difflib
+
+    folder = Path(folder_path)
+    seen, pngs = set(), []
+    for p in sorted(list(folder.glob("*.png")) + list(folder.glob("*.PNG"))):
+        key = p.resolve()
+        if key in seen or p.stem.lower().endswith(_GENERATED_SUFFIXES):
+            continue
+        seen.add(key)
+        pngs.append(p)
+
+    found, duplicates, unrecognized = {}, {}, []
+    for p in pngs:
+        t = detect_image_type(str(p))
+        if t == "unknown":
+            stem = p.stem.lower()
+            best, best_score = None, 0.0
+            for itype, name in _EXPECTED_NAMES.items():
+                score = difflib.SequenceMatcher(None, stem, Path(name).stem.lower()).ratio()
+                if score > best_score:
+                    best, best_score = itype, score
+            unrecognized.append((p.name, best if best_score >= 0.75 else None))
+        elif t in found:
+            duplicates.setdefault(t, [str(found[t])]).append(str(p))
+        else:
+            found[t] = p
+
+    missing = [t for t in required if t not in found]
+    messages = []
+    for name, sugg in unrecognized:
+        hint = (f" -- looks like a misspelled {_EXPECTED_NAMES[sugg]}; rename it to measure {sugg}"
+                if sugg else "")
+        messages.append(f"UNRECOGNISED image '{name}' is not measured{hint}")
+    for t in missing:
+        messages.append(f"MISSING required {t} image ({_EXPECTED_NAMES[t]}) -- {t} not measured")
+    for t, paths in duplicates.items():
+        messages.append(f"DUPLICATE {t} images {[Path(x).name for x in paths]} -- only "
+                        f"{Path(paths[0]).name} is measured")
+    return {"found": {k: str(v) for k, v in found.items()}, "missing": missing,
+            "duplicates": duplicates, "unrecognized": unrecognized, "messages": messages}
+
+
 # ── Core preprocessing ────────────────────────────────────────────────────────
 
 def load_image(image_path: str) -> np.ndarray:

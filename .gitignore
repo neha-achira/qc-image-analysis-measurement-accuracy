@@ -53,3 +53,7 @@ validation_output/
 
 # ── Claude Code local session/tooling state (not project content) ─────────────
 .claude/
+
+# ── Local raw image data (large, not source) ──────────────────────────────────
+Neck.png
+1200 new baseplates/

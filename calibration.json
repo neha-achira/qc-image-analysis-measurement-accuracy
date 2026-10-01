@@ -1,97 +1,86 @@
 {
     "holes": {
-        "scale_factor_mm_per_px": 0.0025,
-        "scale_factor_px_per_mm": 400.0,
-        "scale_factor_um_per_px": 2.5,
-        "reference_image": "Mixing_ch00.png",
-        "reference_feature": "hole",
-        "drawing_nominal_mm": 0.5,
-        "engineer_measured_mm": 0.5,
-        "deviation_from_nominal_mm": 0.0,
-        "n_holes_clicked": 1,
-        "mean_diameter_px": 200.0,
-        "std_diameter_px": 0.0,
-        "cv_percent": 0.0,
-        "individual_diameters_px": [
-            200.0
-        ],
-        "individual_scales": [
-            0.0025
-        ],
+        "scale_factor_mm_per_px": 0.002587,
+        "scale_factor_px_per_mm": 386.5481,
+        "scale_factor_um_per_px": 2.587,
+        "calibration_source": "leica_scale_bar",
+        "reference_image": "Holes_ch00.png (BP 1-30)",
+        "reference_feature": "scale_bar",
+        "engineer_measured_mm": 3.7,
+        "scale_bar_label_mm": 3.7,
+        "scale_bar_length_px": "1435-1440",
+        "scale_bar_label_exact": false,
         "microscope_magnification": "5X",
         "image_format": "PNG",
         "stitched": true,
-        "calibration_date": "2026-05-25T21:35:36.624697",
+        "calibration_date": "2026-09-30",
         "drawing_number": "ACMCTA001",
         "part": "Beta Cartridge",
-        "notes": "Engineer measured 0.5 mm on hole (drawing nominal: 0.5 mm, deviation: +0.00000 mm). Averaged over 1 measurement(s). Applies to image type: holes. Re-calibrate if magnification or camera settings change."
+        "notes": "Physical image scale from the Leica LAS scale bar burnt into every image (verified on BP 1-30): DAB 957.1 um / 370 px = 2.5868 um/px, Neck 954.5 um / 369 px = 2.5867 um/px; Holes '3.7 mm' = 1435-1440 px and Mixing '6.4 mm' = 2473-2481 px (labels rounded to 0.1 mm) agree. One physical scale for all image types. Replaces the 2.5 um/px value that came from entering the drawing nominal (0.5 mm) for a clicked hole. To verify: py calibrate.py verify on the scale bar (click its two ends; known length = scale_bar_label_mm). Confirm against a certified stage micrometer when available."
     },
     "last_calibrated": {
         "image_type": "holes",
-        "date": "2026-05-25T21:35:36.624697",
-        "feature": "hole",
-        "scale_um_per_px": 2.5
+        "date": "2026-09-30",
+        "feature": "scale_bar",
+        "scale_um_per_px": 2.587
     },
     "neck": {
         "scale_factor_mm_per_px": 0.00266667,
         "scale_factor_px_per_mm": 374.9995,
         "scale_factor_um_per_px": 2.66667,
-        "reference_image": "neck_ch00.png",
+        "calibration_source": "legacy_nominal_click",
+        "reference_image": "Neck_ch00.png (BP 1-30)",
         "reference_feature": "neck",
-        "drawing_nominal_mm": 0.2,
         "engineer_measured_mm": 0.2,
-        "deviation_from_nominal_mm": 0.0,
-        "n_holes_clicked": 1,
-        "mean_diameter_px": 75.0,
-        "std_diameter_px": 0.0,
-        "cv_percent": 0.0,
-        "individual_diameters_px": [
-            75.0
-        ],
-        "individual_scales": [
-            0.00266667
-        ],
         "microscope_magnification": "5X",
         "image_format": "PNG",
         "stitched": true,
-        "calibration_date": "2026-05-25T09:51:58.813553",
+        "calibration_date": "2026-09-30",
         "drawing_number": "ACMCTA001",
         "part": "Beta Cartridge",
-        "notes": "Engineer measured 0.2 mm on neck (drawing nominal: 0.2 mm, deviation: +0.00000 mm). Averaged over 1 measurement(s). Applies to image type: neck. Re-calibrate if magnification or camera settings change."
+        "notes": "PRODUCTION neck scale kept at the legacy 2.66667 um/px (from entering the 0.20 mm drawing nominal for a clicked neck) so the provisional LEGACY neck measurement stays comparable to the previously validated production results. The physically observed image scale (Leica scale bar, 2.587 um/px, same as holes/DAB/mixing) is recorded under observed_image_scale and is NOT used for the legacy measurement. The CH05 neck definition is unresolved -- see docs/MEASUREMENT_ACCURACY_VALIDATION.md.",
+        "observed_image_scale": {
+            "um_per_px": 2.587,
+            "source": "Leica scale bar in Neck_ch00.png: 954.5 um / 369 px = 2.5867 um/px (BP 24/25/30: 957.1 um / 370 px = 2.5868)",
+            "used_for_production": false
+        }
     },
     "mixing": {
-        "scale_factor_mm_per_px": 0.0025,
-        "scale_factor_px_per_mm": 400.0,
-        "scale_factor_um_per_px": 2.5,
-        "reference_image": "Mixing_ch00.png",
-        "reference_feature": "hole",
-        "drawing_nominal_mm": 0.5,
-        "engineer_measured_mm": 0.5,
-        "deviation_from_nominal_mm": 0.0,
-        "n_holes_clicked": 1,
-        "mean_diameter_px": 200.0,
-        "std_diameter_px": 0.0,
-        "cv_percent": 0.0,
-        "individual_diameters_px": [
-            200.0
-        ],
-        "individual_scales": [
-            0.0025
-        ],
+        "scale_factor_mm_per_px": 0.002587,
+        "scale_factor_px_per_mm": 386.5481,
+        "scale_factor_um_per_px": 2.587,
+        "calibration_source": "leica_scale_bar",
+        "reference_image": "Mixing_ch00.png (BP 1-30)",
+        "reference_feature": "scale_bar",
+        "engineer_measured_mm": 6.4,
+        "scale_bar_label_mm": 6.4,
+        "scale_bar_length_px": "2473-2481",
+        "scale_bar_label_exact": false,
         "microscope_magnification": "5X",
         "image_format": "PNG",
         "stitched": true,
-        "calibration_date": "2026-05-25T21:35:36.624697",
+        "calibration_date": "2026-09-30",
         "drawing_number": "ACMCTA001",
         "part": "Beta Cartridge",
-        "notes": "Mixing_ch00.png calibration. 200px = 0.50mm. 2.500 um/px."
+        "notes": "Physical image scale from the Leica LAS scale bar burnt into every image (verified on BP 1-30): DAB 957.1 um / 370 px = 2.5868 um/px, Neck 954.5 um / 369 px = 2.5867 um/px; Holes '3.7 mm' = 1435-1440 px and Mixing '6.4 mm' = 2473-2481 px (labels rounded to 0.1 mm) agree. One physical scale for all image types. Replaces the 2.5 um/px value that came from entering the drawing nominal (0.5 mm) for a clicked hole. To verify: py calibrate.py verify on the scale bar (click its two ends; known length = scale_bar_label_mm). Confirm against a certified stage micrometer when available."
     },
     "DAB": {
-    "scale_factor_mm_per_px": 0.0025,
-    "scale_factor_px_per_mm": 400.0,
-    "scale_factor_um_per_px": 2.5,
-    "reference_image": "DAB_ch00.png",
-    "reference_feature": "hole",
-    "drawing_nominal_mm": 0.5
-}
+        "scale_factor_mm_per_px": 0.002587,
+        "scale_factor_px_per_mm": 386.5481,
+        "scale_factor_um_per_px": 2.587,
+        "calibration_source": "leica_scale_bar",
+        "reference_image": "DAB_ch00.png (BP 1-30)",
+        "reference_feature": "scale_bar",
+        "engineer_measured_mm": 0.9571,
+        "scale_bar_label_mm": 0.9571,
+        "scale_bar_length_px": 370,
+        "scale_bar_label_exact": true,
+        "microscope_magnification": "5X",
+        "image_format": "PNG",
+        "stitched": true,
+        "calibration_date": "2026-09-30",
+        "drawing_number": "ACMCTA001",
+        "part": "Beta Cartridge",
+        "notes": "Physical image scale from the Leica LAS scale bar burnt into every image (verified on BP 1-30): DAB 957.1 um / 370 px = 2.5868 um/px, Neck 954.5 um / 369 px = 2.5867 um/px; Holes '3.7 mm' = 1435-1440 px and Mixing '6.4 mm' = 2473-2481 px (labels rounded to 0.1 mm) agree. One physical scale for all image types. Replaces the 2.5 um/px value that came from entering the drawing nominal (0.5 mm) for a clicked hole. To verify: py calibrate.py verify on the scale bar (click its two ends; known length = scale_bar_label_mm). Confirm against a certified stage micrometer when available."
+    }
 }
