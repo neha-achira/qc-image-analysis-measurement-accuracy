@@ -28,17 +28,29 @@
         "scale_factor_mm_per_px": 0.00266667,
         "scale_factor_px_per_mm": 374.9995,
         "scale_factor_um_per_px": 2.66667,
-        "calibration_source": "legacy_nominal_click",
-        "reference_image": "Neck_ch00.png (BP 1-30)",
+        "reference_image": "neck_ch00.png",
         "reference_feature": "neck",
+        "drawing_nominal_mm": 0.2,
         "engineer_measured_mm": 0.2,
+        "deviation_from_nominal_mm": 0.0,
+        "n_holes_clicked": 1,
+        "mean_diameter_px": 75.0,
+        "std_diameter_px": 0.0,
+        "cv_percent": 0.0,
+        "individual_diameters_px": [
+            75.0
+        ],
+        "individual_scales": [
+            0.00266667
+        ],
         "microscope_magnification": "5X",
         "image_format": "PNG",
         "stitched": true,
-        "calibration_date": "2026-09-30",
+        "calibration_date": "2026-05-25T09:51:58.813553",
         "drawing_number": "ACMCTA001",
         "part": "Beta Cartridge",
-        "notes": "PRODUCTION neck scale kept at the legacy 2.66667 um/px (from entering the 0.20 mm drawing nominal for a clicked neck) so the provisional LEGACY neck measurement stays comparable to the previously validated production results. The physically observed image scale (Leica scale bar, 2.587 um/px, same as holes/DAB/mixing) is recorded under observed_image_scale and is NOT used for the legacy measurement. The CH05 neck definition is unresolved -- see docs/MEASUREMENT_ACCURACY_VALIDATION.md.",
+        "calibration_source": "legacy_nominal_click",
+        "notes": "PRODUCTION neck scale kept at the legacy 2.66667 um/px (from entering the 0.20 mm drawing nominal for a clicked neck) so the provisional LEGACY neck measurement stays comparable to the previously validated production results. The physically observed image scale (Leica scale bar, 2.587 um/px, same as holes/DAB/mixing) is recorded under observed_image_scale and is NOT used for the legacy measurement. The CH05 neck definition is unresolved -- see docs/MEASUREMENT_ACCURACY_VALIDATION.md. Original calibration record (2026-05-25): Engineer measured 0.2 mm on neck (drawing nominal: 0.2 mm, deviation: +0.00000 mm). Averaged over 1 measurement(s). Applies to image type: neck. Re-calibrate if magnification or camera settings change.",
         "observed_image_scale": {
             "um_per_px": 2.587,
             "source": "Leica scale bar in Neck_ch00.png: 954.5 um / 369 px = 2.5867 um/px (BP 24/25/30: 957.1 um / 370 px = 2.5868)",

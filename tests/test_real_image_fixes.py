@@ -266,3 +266,17 @@ def test_missing_image_produces_not_measured_row():
     assert rows[0]["pass_fail"] == "NOT_MEASURED"
     assert "Mixing_ch00.png" in rows[0]["notes"]
     assert res["overall_pass"] is False
+
+
+def _res(passed, **features):
+    return {"overall_pass": passed, "features": features}
+
+
+def test_folder_verdict_matches_gui_rule():
+    ok = {t: _res(True) for t in ("holes", "neck", "dab")}
+    assert df.folder_verdict(ok | {"mixing": _res(True)}) == "PASS"
+    missing = df.missing_image_result("mixing", "MISSING required mixing image")
+    assert df.folder_verdict(ok | {"mixing": missing}) == "INCOMPLETE"
+    nm_neck = _res(False, error="x", not_measured=True)
+    assert df.folder_verdict(ok | {"neck": nm_neck}) == "INCOMPLETE"
+    assert df.folder_verdict(ok | {"holes": _res(False), "mixing": missing}) == "FAIL"

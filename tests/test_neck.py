@@ -315,3 +315,25 @@ def test_detect_passes_observed_scale_but_production_uses_calibration(tmp_path):
     assert f["tolerance"]["measured_mm"] == pytest.approx(f["trimmed_mean_mm"], abs=1e-5)
     e = f["experimental_ch05"]
     assert e["neck_width_mm"] == pytest.approx(e["neck_width_px"] * OBS, abs=1e-5)
+
+
+def test_experimental_detector_does_not_print_into_production_log(capsys):
+    """Only the legacy (production) neck line may appear in the log; the
+    experimental CH05 result is diagnostic data, not a second PASS/FAIL."""
+    img, _ = synth_neck("A")
+    pre = _pre(img)
+    pre["observed_image_scale_mm_per_px"] = OBS
+    capsys.readouterr()
+    res = df.detect_neck(pre, PROD)
+    out = capsys.readouterr().out
+    assert res["experimental_ch05"]["neck_width_px"] > 0          # still produced
+    assert "appearance" not in out and "profiles" not in out      # experimental line absent
+    assert sum("PASS" in l or "FAIL" in l for l in out.splitlines()) <= 1
+
+
+def test_neck_calibration_keeps_original_click_metadata():
+    neck = json.load(open(REPO / "calibration.json"))["neck"]
+    assert neck["drawing_nominal_mm"] == 0.2 and neck["engineer_measured_mm"] == 0.2
+    assert neck["individual_diameters_px"] == [75.0]
+    assert neck["individual_scales"] == [0.00266667]
+    assert neck["calibration_date"].startswith("2026-05-25")

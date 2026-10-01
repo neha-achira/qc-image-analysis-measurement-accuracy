@@ -41,6 +41,8 @@ import cv2
 import numpy as np
 import json
 import argparse
+import contextlib
+import io
 import os
 import sys
 import time
@@ -1392,7 +1394,10 @@ def _experimental_neck_summary(preprocessed, mm_per_px):
     """
     obs = preprocessed.get("observed_image_scale_mm_per_px")
     try:
-        r = detect_neck_experimental(preprocessed, obs if obs else mm_per_px)
+        # The detector prints its own PASS/FAIL line; keep that out of the
+        # production/GUI log -- this result is diagnostic data only.
+        with contextlib.redirect_stdout(io.StringIO()):
+            r = detect_neck_experimental(preprocessed, obs if obs else mm_per_px)
     except Exception as e:                      # diagnostics must never break production
         return {"error": f"experimental detector failed: {e}"}
     keep = ("neck_width_mm", "neck_width_px", "appearance", "boundary_logic", "confidence",
@@ -2074,59 +2079,6 @@ def annotate_neck_experimental(img, result):
                     cv2.FONT_HERSHEY_SIMPLEX, 0.55, c, 1, cv2.LINE_AA)
     return out
 
-    tol = result["tolerance"]
-    op  = result["overall_pass"]
-    col = COL_GREEN if op else COL_RED
-
-    # ── Channel mask overlay (semi-transparent cyan tint) ────────────────────
-    chan_mask = result.get("channel_mask")
-    if chan_mask is not None:
-        overlay = out.copy()
-        overlay[chan_mask > 0] = [255, 210, 0]
-        out = cv2.addWeighted(out, 0.65, overlay, 0.35, 0)
-
-    # ── Medial axis dots coloured by local width ──────────────────────────────
-    pts       = result.get("medial_pts")
-    chan_dist  = result.get("channel_dist")
-    mean_px   = result["mean_width_px"]
-
-    if pts is not None and chan_dist is not None:
-        for py, px in pts:
-            w_px = chan_dist[py, px] * 2.0
-            frac = w_px / max(mean_px, 1.0)
-            dot_col = COL_RED if frac < 0.85 else (COL_ORANGE if frac > 1.15 else COL_GREEN)
-            cv2.circle(out, (int(px), int(py)), 4, dot_col, -1)
-
-    # ── Narrowest point marker ────────────────────────────────────────────────
-    nx, ny = result["narrowest_xy_px"]
-    hw     = int(result["p10_width_px"] / 2)
-    cv2.line(out, (nx, ny - hw - 10), (nx, ny + hw + 10), COL_RED, 3)
-    cv2.circle(out, (nx, ny), 12, COL_RED, 2)
-    cv2.putText(out, f"Narrowest: {result['p10_width_mm']:.4f} mm",
-                (nx + 16, ny - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.75, COL_RED, 2)
-
-    # ── Summary panel ─────────────────────────────────────────────────────────
-    panel_h = 130
-    cv2.rectangle(out, (0, h - panel_h), (w, h), (18, 18, 18), -1)
-    cv2.rectangle(out, (0, h - panel_h), (w, h), (60, 60, 60), 2)
-
-    cv2.putText(out, "PASS" if op else "FAIL",
-                (20, h - 16), cv2.FONT_HERSHEY_SIMPLEX, 1.2, col, 3)
-
-    lines = [
-        (f"Mean width  : {result['mean_width_mm']:.4f} mm  "
-         f"(nom 0.20 mm, dev {tol['deviation_mm']:+.5f} mm)", col),
-        (f"P10 (narrow): {result['p10_width_mm']:.4f} mm   "
-         f"P90 (wide) : {result['p90_width_mm']:.4f} mm", COL_WHITE),
-        (f"Medial pts  : {result['n_medial_pts']}   "
-         f"Std: {result['std_width_px']:.1f} px   DWG: ACMCTA001", (150, 150, 150)),
-    ]
-    for i, (txt, c) in enumerate(lines):
-        cv2.putText(out, txt, (20, h - panel_h + 36 + i * 32),
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.62, c, 2)
-
-    return out
-
 
 # ══════════════════════════════════════════════════════════════════════════════
 # MAIN ENTRY
@@ -2209,6 +2161,23 @@ def missing_image_result(image_type, message):
     return {"image_path": "", "image_type": image_type, "mm_per_px": 0,
             "calibration_source": "", "features": {"error": message, "missing_image": True},
             "overall_pass": False}
+
+
+def folder_verdict(results):
+    """
+    Cartridge verdict with the same rule as the GUI summary (qc_app):
+    FAIL if any measured image fails; INCOMPLETE if every measured image
+    passes but a required image is missing or NOT_MEASURED; else PASS.
+    """
+    unmeasured = [r for r in results.values()
+                  if r["features"].get("missing_image") or r["features"].get("not_measured")]
+    measured = [r for r in results.values() if r not in unmeasured]
+    if not all(r["overall_pass"] for r in measured):
+        return "FAIL"
+    return "INCOMPLETE" if unmeasured else "PASS"
+
+
+_VERDICT_LABEL = {"PASS": "✓ PASS", "FAIL": "✗ FAIL", "INCOMPLETE": "- INCOMPLETE"}
 
 
 def detect_cartridge_folder(folder_path, calibration, debug=False, calibration_mode="json"):
@@ -2384,8 +2353,7 @@ Examples:
             sys.exit("✗ No calibration file found. Run calibrate.py first.")
         cal     = load_calibration(cal_path)
         results = detect_cartridge_folder(args.folder, cal, debug=args.debug)
-        overall = all(r["overall_pass"] for r in results.values())
-        print(f"\n  Folder: {'✓ PASS' if overall else '✗ FAIL'}")
+        print(f"\n  Folder: {_VERDICT_LABEL[folder_verdict(results)]}")
 
         # Export CSV for single folder too
         cartridge_id = Path(args.folder).name
@@ -2661,8 +2629,7 @@ def run_batch(folders: list, calibration: dict,
 
         results = detect_cartridge_folder(str(folder_path), calibration, debug=debug,
                                            calibration_mode=calibration_mode)
-        overall = all(r["overall_pass"] for r in results.values())
-        print(f"  Result   : {'✓ PASS' if overall else '✗ FAIL'}")
+        print(f"  Result   : {_VERDICT_LABEL[folder_verdict(results)]}")
 
         rows = results_to_rows(cartridge_id, results)
         all_rows.extend(rows)
